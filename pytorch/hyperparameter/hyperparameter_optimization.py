@@ -83,7 +83,7 @@ class Net2(nn.Module):
 
 task = Task.init(
     project_name="pytorch-testing",
-    task_name="Hyperparameter optimizer example v3",
+    task_name="Hyperparameter optimizer example v6",
 )
 
 optimizer = HyperParameterOptimizer(
@@ -101,6 +101,7 @@ optimizer = HyperParameterOptimizer(
     # execution_queue="default",  # for remote agent
     # set time limit for single experiment
     time_limit_per_job=10,
+    # Check the experiments every 12 seconds
     pool_period_min=0.2,
 )
 
@@ -112,11 +113,12 @@ optimizer.start_locally()
 
 # we can create a pooling loop if we like
 # top_exp = optimizer.get_top_experiments(top_k=3)
-top_exp = optimizer.get_top_experiments_details(top_k=3)
-print(top_exp)
 # wait until optimization completed or timed-out
 optimizer.wait()
+top_exp = optimizer.get_top_experiments_details(top_k=3)
+
 # make sure we stop all jobs
 optimizer.stop()
 
+print(top_exp)
 print("Completed!")
