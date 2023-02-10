@@ -83,15 +83,15 @@ class Net2(nn.Module):
 
 task = Task.init(
     project_name="pytorch-testing",
-    task_name="Hyperparameter optimizer example v2",
+    task_name="Hyperparameter optimizer example v3",
 )
 
 optimizer = HyperParameterOptimizer(
-    base_task_id="e763d23d37184e549f560cfdd2174274",
+    base_task_id="0467f868e9154f3ab72727c141614d52",
     hyper_parameters=[
         UniformParameterRange("Args/lr", min_value=0.01, max_value=0.3, step_size=0.05),
         DiscreteParameterRange("Args/net", values=["Net1", "Net2"]),
-        DiscreteParameterRange("Args/epochs", values=[10, 30, 50]),
+        DiscreteParameterRange("Args/epochs", values=[5, 10]),
     ],
     objective_metric_title="test",
     objective_metric_series="loss",
@@ -99,21 +99,21 @@ optimizer = HyperParameterOptimizer(
     max_number_of_concurrent_tasks=5,
     optimizer_class=RandomSearch,
     # execution_queue="default",  # for remote agent
-    time_limit_per_job=120,
+    # set time limit for single experiment
+    time_limit_per_job=10,
     pool_period_min=0.2,
-    max_iteration_per_job=30,
 )
 
 # This will automatically create and print the optimizer new task id
 # for later use. if a Task was already created, it will use it.
 optimizer.set_report_period(0.2)
-optimizer.set_time_limit(in_minutes=5.0)
+optimizer.set_time_limit(in_minutes=2.0)
 optimizer.start_locally()
 
 # we can create a pooling loop if we like
-while not optimizer.reached_time_limit():
-    top_exp = optimizer.get_top_experiments(top_k=3)
-    print(top_exp)
+# top_exp = optimizer.get_top_experiments(top_k=3)
+top_exp = optimizer.get_top_experiments_details(top_k=3)
+print(top_exp)
 # wait until optimization completed or timed-out
 optimizer.wait()
 # make sure we stop all jobs
