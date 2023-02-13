@@ -100,7 +100,7 @@ def job_complete_callback(
 # Create a new task
 task = Task.init(
     project_name="hyperparameter-optimization",
-    task_name="Hyperparameter optimization - multiple iterations",
+    task_name="Hyperparameter optimization - OptimizerOptuna",
 )
 
 optimizer = HyperParameterOptimizer(
@@ -131,19 +131,18 @@ optimizer = HyperParameterOptimizer(
 # for later use. if a Task was already created, it will use it.
 optimizer.set_report_period(0.2)
 
-for i in range(2):
-    optimizer.start_locally(job_complete_callback=job_complete_callback)
+optimizer.start_locally(job_complete_callback=job_complete_callback)
 
-    # wait until optimization completed or timed-out
-    optimizer.wait()
+# wait until optimization completed or timed-out
+optimizer.wait()
 
-    # top_exp = optimizer.get_top_experiments(top_k=3)
-    # print([t.id for t in top_exp])
+# top_exp = optimizer.get_top_experiments(top_k=3)
+# print([t.id for t in top_exp])
 
-    top_exp = optimizer.get_top_experiments_details(top_k=3)
-    print(top_exp)
+top_exp = optimizer.get_top_experiments_details(top_k=3)
+print(top_exp)
 
-    # make sure we stop all jobs
-    optimizer.stop()
+# make sure we stop all jobs
+optimizer.stop()
 
 print("Completed!")
