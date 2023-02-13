@@ -120,28 +120,30 @@ optimizer = HyperParameterOptimizer(
     # configure optimization parameters
     optimization_time_limit=10.0,  # minutes
     # compute_time_limit=2.0,
-    total_max_jobs=10,
+    total_max_jobs=5,
     max_number_of_concurrent_tasks=5,
     pool_period_min=0.2,
-    min_iteration_per_job=1,
-    max_iteration_per_job=5,
+    min_iteration_per_job=5,
+    max_iteration_per_job=10,
 )
 
 # This will automatically create and print the optimizer new task id
 # for later use. if a Task was already created, it will use it.
 optimizer.set_report_period(0.2)
-optimizer.start_locally(job_complete_callback=job_complete_callback)
 
-# wait until optimization completed or timed-out
-optimizer.wait()
+for i in range(2):
+    optimizer.start_locally(job_complete_callback=job_complete_callback)
 
-# top_exp = optimizer.get_top_experiments(top_k=3)
-# print([t.id for t in top_exp])
+    # wait until optimization completed or timed-out
+    optimizer.wait()
 
-top_exp = optimizer.get_top_experiments_details(top_k=3)
-print(top_exp)
+    # top_exp = optimizer.get_top_experiments(top_k=3)
+    # print([t.id for t in top_exp])
 
-# make sure we stop all jobs
-optimizer.stop()
+    top_exp = optimizer.get_top_experiments_details(top_k=3)
+    print(top_exp)
+
+    # make sure we stop all jobs
+    optimizer.stop()
 
 print("Completed!")
