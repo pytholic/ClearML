@@ -4,13 +4,13 @@ import torch.nn.functional as F
 from clearml import Task
 from clearml.automation import (
     DiscreteParameterRange,
-    GridSearch,
     HyperParameterOptimizer,
-    RandomSearch,
     UniformParameterRange,
 )
+from clearml.automation.optuna import OptimizerOptuna
 
 
+# Define model classes
 class Net1(nn.Module):
     def __init__(self):
         super().__init__()
@@ -81,6 +81,7 @@ class Net2(nn.Module):
         return F.log_softmax(x, dim=1)
 
 
+# Callback function
 def job_complete_callback(
     job_id,  # type: str
     objective_value,  # type: float
@@ -96,34 +97,39 @@ def job_complete_callback(
         print(f"Top performance experiment id: {top_performance_job_id}")
 
 
+# Create a new task
 task = Task.init(
-    project_name="pytorch-testing",
-    task_name="Hyperparameter optimizer example v9 - top_k with more details",
+    project_name="hyperparameter-optimization",
+    task_name="Hyperparameter optimization - multiple iterations",
 )
 
 optimizer = HyperParameterOptimizer(
     base_task_id="0467f868e9154f3ab72727c141614d52",
+    # set hyperparameters to be optimizaed
     hyper_parameters=[
         UniformParameterRange("Args/lr", min_value=0.01, max_value=0.3, step_size=0.05),
         DiscreteParameterRange("Args/net", values=["Net1", "Net2"]),
         DiscreteParameterRange("Args/epochs", values=[5, 10]),
     ],
+    # setting the objective metric
     objective_metric_title="test",
     objective_metric_series="loss",
     objective_metric_sign="min",
+    # set optimizer
+    optimizer_class=OptimizerOptuna,
+    # configure optimization parameters
+    optimization_time_limit=10.0,  # minutes
+    # compute_time_limit=2.0,
+    total_max_jobs=10,
     max_number_of_concurrent_tasks=5,
-    optimizer_class=RandomSearch,
-    # execution_queue="default",  # for remote agent
-    # set time limit for single experiment
-    time_limit_per_job=10,
-    # Check the experiments every 12 seconds
     pool_period_min=0.2,
+    min_iteration_per_job=1,
+    max_iteration_per_job=5,
 )
 
 # This will automatically create and print the optimizer new task id
 # for later use. if a Task was already created, it will use it.
 optimizer.set_report_period(0.2)
-optimizer.set_time_limit(in_minutes=2.0)
 optimizer.start_locally(job_complete_callback=job_complete_callback)
 
 # wait until optimization completed or timed-out
