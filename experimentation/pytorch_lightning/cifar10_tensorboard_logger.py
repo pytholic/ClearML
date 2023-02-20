@@ -63,8 +63,8 @@ class LightningCIFAR10Classifier(pl.LightningModule):
         total = len(y)
         loss = self.cross_entropy_loss(logits, y)
         acc = self.accuracy(logits, y)
-        self.log("train_accuracy", acc)
-        self.log("train_loss", loss)
+        self.log("iteration_accuracy/train_accuracy", acc)
+        self.log("iteration_loss/train_loss", loss)
 
         batch_dictionary = {
             # REQUIRED: It ie required for us to return "loss"
@@ -86,10 +86,12 @@ class LightningCIFAR10Classifier(pl.LightningModule):
         total = sum([x["total"] for x in outputs])
 
         # logging using tensorboard logger
-        self.logger.experiment.add_scalar("Loss/Train", avg_loss, self.current_epoch)
+        self.logger.experiment.add_scalar(
+            "epoch_loss/train", avg_loss, self.current_epoch
+        )
 
         self.logger.experiment.add_scalar(
-            "Accuracy/Train", correct / total, self.current_epoch
+            "epoch_accuracy/train", correct / total, self.current_epoch
         )
 
     def validation_step(self, val_batch, batch_idx):
@@ -99,8 +101,8 @@ class LightningCIFAR10Classifier(pl.LightningModule):
         total = len(y)
         loss = self.cross_entropy_loss(logits, y)
         acc = self.accuracy(logits, y)
-        self.log("val_accuracy", acc)
-        self.log("val_loss", loss)
+        self.log("iteration_accuracy/val_accuracy", acc)
+        self.log("iteration_loss/val_loss", loss)
 
         batch_dictionary = {
             # REQUIRED: It ie required for us to return "loss"
@@ -122,10 +124,12 @@ class LightningCIFAR10Classifier(pl.LightningModule):
         total = sum([x["total"] for x in outputs])
 
         # logging using tensorboard logger
-        self.logger.experiment.add_scalar("Loss/Val", avg_loss, self.current_epoch)
+        self.logger.experiment.add_scalar(
+            "epoch_loss/val", avg_loss, self.current_epoch
+        )
 
         self.logger.experiment.add_scalar(
-            "Accuracy/Val", correct / total, self.current_epoch
+            "epoch_accuracy/val", correct / total, self.current_epoch
         )
 
     def configure_optimizers(self):
@@ -170,13 +174,13 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", default=64, type=int)
     parser.add_argument("--num_classes", default=10, type=int)
     parser = pl.Trainer.add_argparse_args(parser)
-    parser.set_defaults(max_epochs=3)
+    parser.set_defaults(max_epochs=20)
     args = parser.parse_args()
 
     # saves top-K checkpoints based on "val_loss" metric
     checkpoint_callback = ModelCheckpoint(
         save_top_k=1,
-        monitor="val_loss",
+        monitor="iteration_loss/val_loss",
         mode="min",
         filename="cifar10-{epoch:02d}-{val_loss:.2f}",
     )
@@ -188,5 +192,7 @@ if __name__ == "__main__":
 
     # train
     model = LightningCIFAR10Classifier()
-    trainer = pl.Trainer.from_argparse_args(args, logger=logger)
+    trainer = pl.Trainer.from_argparse_args(
+        args, logger=logger, callbacks=[checkpoint_callback]
+    )
     trainer.fit(model, data_module)
