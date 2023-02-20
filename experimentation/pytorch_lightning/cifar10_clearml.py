@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 
 import torch
+import torchmetrics
 from clearml import Logger, Task
 from torch import nn
 from torch.nn import functional as F
@@ -11,6 +12,7 @@ from torchvision import datasets, transforms
 from torchvision.datasets import CIFAR10
 
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
 
 
 class LightningCIFAR10Classifier(pl.LightningModule):
@@ -27,7 +29,11 @@ class LightningCIFAR10Classifier(pl.LightningModule):
         self.convs(x)
 
         self.fc1 = nn.Linear(self._to_linear, 128)
-        self.fc2 = nn.Linear(128, 10)
+        self.fc2 = nn.Linear(128, args.num_classes)
+
+        self.accuracy = torchmetrics.Accuracy(
+            task="multiclass", num_classes=args.num_classes
+        )
 
     def convs(self, x):
         x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
@@ -53,6 +59,8 @@ class LightningCIFAR10Classifier(pl.LightningModule):
         x, y = train_batch
         logits = self.forward(x)
         loss = self.cross_entropy_loss(logits, y)
+        acc = self.accuracy(logits, y)
+        self.log("train_accuracy", acc)
         self.log("train_loss", loss)
         return loss
 
@@ -60,6 +68,8 @@ class LightningCIFAR10Classifier(pl.LightningModule):
         x, y = val_batch
         logits = self.forward(x)
         loss = self.cross_entropy_loss(logits, y)
+        acc = self.accuracy(logits, y)
+        self.log("val_accuracy", acc)
         self.log("val_loss", loss)
 
     def configure_optimizers(self):
@@ -95,21 +105,30 @@ if __name__ == "__main__":
     # from here on everything is logged automatically
     task = Task.init(
         project_name="experimentation/pytorch-lightning",
-        task_name=f"pytorch-lightning-cifar10-{datetime.now()}",
+        task_name=f"pytorch-lightning-cifar10-topkcheckpoints-{datetime.now()}",
     )
 
     pl.seed_everything(0)
 
     parser = ArgumentParser()
     parser.add_argument("--batch_size", default=64, type=int)
+    parser.add_argument("--num_classes", default=10, type=int)
     parser = pl.Trainer.add_argparse_args(parser)
-    parser.set_defaults(max_epochs=3)
+    parser.set_defaults(max_epochs=20)
     args = parser.parse_args()
+
+    # saves top-K checkpoints based on "val_loss" metric
+    checkpoint_callback = ModelCheckpoint(
+        save_top_k=1,
+        monitor="val_loss",
+        mode="min",
+        filename="cifar10-{epoch:02d}-{val_loss:.2f}",
+    )
 
     # data
     data_module = CIFAR10DataModule()
 
     # train
     model = LightningCIFAR10Classifier()
-    trainer = pl.Trainer.from_argparse_args(args)
+    trainer = pl.Trainer.from_argparse_args(args, callbacks=[checkpoint_callback])
     trainer.fit(model, data_module)
