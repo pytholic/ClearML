@@ -59,8 +59,7 @@ class LightningCIFAR10Classifier(pl.LightningModule):
     def validation_step(self, val_batch, batch_idx):
         x, y = val_batch
         logits = self.forward(x)
-        loss = self.cross_efrom pytorch_lightning.callbacks import ModelCheckpoint
-ntropy_loss(logits, y)
+        loss = self.cross_entropy_loss(logits, y)
         self.log("val_loss", loss)
 
     def configure_optimizers(self):
