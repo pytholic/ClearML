@@ -64,6 +64,10 @@ class LightningCIFAR10Classifier(pl.LightningModule):
         self.log("train_loss", loss)
         return loss
 
+    def training_epoch_end(self, outputs):
+        avg_train_loss = torch.stack(tuple(output["loss"] for output in outputs)).mean()
+        self.log("avg_epoch_train_loss: ", avg_train_loss, logger=True, prog_bar=True)
+
     def validation_step(self, val_batch, batch_idx):
         x, y = val_batch
         logits = self.forward(x)

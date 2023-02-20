@@ -13,6 +13,7 @@ from torchvision.datasets import CIFAR10
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger
 
 
 class LightningCIFAR10Classifier(pl.LightningModule):
@@ -58,19 +59,74 @@ class LightningCIFAR10Classifier(pl.LightningModule):
     def training_step(self, train_batch, batch_idx):
         x, y = train_batch
         logits = self.forward(x)
+        correct = logits.argmax(dim=1).eq(y).sum().item()
+        total = len(y)
         loss = self.cross_entropy_loss(logits, y)
         acc = self.accuracy(logits, y)
         self.log("train_accuracy", acc)
         self.log("train_loss", loss)
-        return loss
+
+        batch_dictionary = {
+            # REQUIRED: It ie required for us to return "loss"
+            "loss": loss,
+            # info to be used at epoch end
+            "correct": correct,
+            "total": total,
+        }
+
+        return batch_dictionary
+
+    def training_epoch_end(self, outputs):
+
+        # calculating average loss
+        avg_loss = torch.stack([x["loss"] for x in outputs]).mean()
+
+        # calculating correect and total predictions
+        correct = sum([x["correct"] for x in outputs])
+        total = sum([x["total"] for x in outputs])
+
+        # logging using tensorboard logger
+        self.logger.experiment.add_scalar("Loss/Train", avg_loss, self.current_epoch)
+
+        self.logger.experiment.add_scalar(
+            "Accuracy/Train", correct / total, self.current_epoch
+        )
 
     def validation_step(self, val_batch, batch_idx):
         x, y = val_batch
         logits = self.forward(x)
+        correct = logits.argmax(dim=1).eq(y).sum().item()
+        total = len(y)
         loss = self.cross_entropy_loss(logits, y)
         acc = self.accuracy(logits, y)
         self.log("val_accuracy", acc)
         self.log("val_loss", loss)
+
+        batch_dictionary = {
+            # REQUIRED: It ie required for us to return "loss"
+            "val_loss": loss,
+            # info to be used at epoch end
+            "correct": correct,
+            "total": total,
+        }
+
+        return batch_dictionary
+
+    def validation_epoch_end(self, outputs):
+
+        # calculating average loss
+        avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
+
+        # calculating correect and total predictions
+        correct = sum([x["correct"] for x in outputs])
+        total = sum([x["total"] for x in outputs])
+
+        # logging using tensorboard logger
+        self.logger.experiment.add_scalar("Loss/Val", avg_loss, self.current_epoch)
+
+        self.logger.experiment.add_scalar(
+            "Accuracy/Val", correct / total, self.current_epoch
+        )
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
@@ -114,7 +170,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", default=64, type=int)
     parser.add_argument("--num_classes", default=10, type=int)
     parser = pl.Trainer.add_argparse_args(parser)
-    parser.set_defaults(max_epochs=20)
+    parser.set_defaults(max_epochs=3)
     args = parser.parse_args()
 
     # saves top-K checkpoints based on "val_loss" metric
@@ -125,10 +181,12 @@ if __name__ == "__main__":
         filename="cifar10-{epoch:02d}-{val_loss:.2f}",
     )
 
+    logger = TensorBoardLogger("tb_logs")
+
     # data
     data_module = CIFAR10DataModule()
 
     # train
     model = LightningCIFAR10Classifier()
-    trainer = pl.Trainer.from_argparse_args(args, callbacks=[checkpoint_callback])
+    trainer = pl.Trainer.from_argparse_args(args, logger=logger)
     trainer.fit(model, data_module)
