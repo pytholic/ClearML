@@ -1,17 +1,18 @@
 import os
 
-import pytorch_lightning as pl
 import torch
 from torch import nn
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
-from torchvision.datasets import MNIST
+from torchvision.datasets import CIFAR10
+
+import pytorch_lightning as pl
 
 
 class LightningCIFAR10Classifier(pl.LightningModule):
-    def __int__(self):
-        super().__init()
+    def __init__(self):
+        super().__init__()
 
         self.conv1 = nn.Conv2d(3, 32, 5)
         self.conv2 = nn.Conv2d(32, 64, 5)
@@ -71,10 +72,10 @@ class CIFAR10DataModule(pl.LightningDataModule):
         )
 
         # prepare transforms standard to MNIST
-        self.cifar10_train = MNIST(
+        self.cifar10_train = CIFAR10(
             root="../data", train=True, download=False, transform=transform
         )
-        self.cifar10_test = MNIST(
+        self.cifar10_test = CIFAR10(
             root="../data", train=False, download=False, transform=transform
         )
 
