@@ -6,6 +6,7 @@ import torch
 import torchmetrics
 import utils
 from clearml import Task
+from clearml.automation.controller import PipelineDecorator
 from config import config
 from config.config import logger
 from model import *
@@ -53,18 +54,24 @@ class LightningCIFAR10Classifier(pl.LightningModule):
 
 
 class CIFAR10DataModule(pl.LightningDataModule):
-    def setup(self, stage):
-        # transforms for images
-        transform = transforms.Compose(
-            [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
+    def __init__(self):
+        super().__init__()
+
+        self.transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            ]
         )
+
+    def prepare_data(self):
 
         # prepare transforms standard to MNIST
         self.cifar10_train = CIFAR10(
-            root=config.DATA_DIR, train=True, download=False, transform=transform
+            root=config.DATA_DIR, train=True, download=False, transform=self.transform
         )
         self.cifar10_test = CIFAR10(
-            root=config.DATA_DIR, train=False, download=False, transform=transform
+            root=config.DATA_DIR, train=False, download=False, transform=self.transform
         )
 
     def train_dataloader(self):
@@ -75,48 +82,77 @@ class CIFAR10DataModule(pl.LightningDataModule):
     def val_dataloader(self):
         return DataLoader(self.cifar10_test, batch_size=args.batch_size, num_workers=24)
 
+# Data
+@PipelineDecorator.component()
+def load_and_prepare_data()
+    data_module = CIFAR10DataModule()
+    return data_module
 
-if __name__ == "__main__":
+# Model
 
-    # Read args
+
+@PipelineDecorator.component()
+def create_model(model=model):
+
+    classifier = LightningCIFAR10Classifier(model=model)
+    return classifier
+
+@PipelineDecorator.component()
+def read_args():
+
     logger.info("Reading arguments...")
     args_path = config.CONFIG_DIR / "args.json"
     args = Namespace(**utils.load_dict(filepath=args_path))
+    return args
 
-    # Connecting ClearML with the current process,
-    # from here on everything is logged automatically
-    logger.info("Initilizaing clearML task...")
+@PipelineDecorator.component()
+def create_task():
     task = Task.init(
-        project_name="experimentation/logging",
-        task_name=f"logging-example-{datetime.now()}",
+        project_name="experimentation/pipelines",
+        task_name=f"pipeline-example-{datetime.now()}",
     )
-    task.connect(args)
 
-    # # saves top-K checkpoints based on "val_loss" metric
+@PipelineDecorator.component()
+def train(args, callbacks, classifier, data_module):
+    trainer = pl.Trainer.from_argparse_args(
+        args, callbacks=[callbacks], default_root_dir=config.LOGS_DIR
+    )
+    trainer.fit(classifier, data_module)
+
+
+@PipelineDecorator.pipeline(name="Test Pipeline", project="Pipeline Examples", version="0.1")
+def main():
+    
+    # Data
+    logger.info("Preparing data...")
+    data_module = load_and_prepare_data()
+    
+    # Model
+    logger.info("Creating model...")
+    model = cifar10Classifier()
+    classifer = create_model(model=model)
+
+    # Read args
+    logger.info("Reading arguments...")
+    args = read_args()
+    
+    # Create task
+    logger.info("Initilizaing clearML task...")
+    create_task()
+
+    # Saves top-K checkpoints
     checkpoint_callback = ModelCheckpoint(
         save_top_k=1,
         monitor="loss/val_loss",
         mode="min",
-        filename="logging-example-{epoch:02d}-{val_loss:.2f}",
+        filename="pipeline-example-{epoch:02d}-{val_loss:.2f}",
     )
-
-    # Data
-    data_module = CIFAR10DataModule()
-
-    # Model
-    model = cifar10Classifier()
-
+    
     # Train
-    classifier = LightningCIFAR10Classifier(model=model)
-    trainer = pl.Trainer.from_argparse_args(
-        args, callbacks=[checkpoint_callback], default_root_dir=config.LOGS_DIR
-    )
-
     logger.info("Starting training...")
-    trainer.fit(classifier, data_module)
+    train(args, checkpoint_callback, classifer, data_module)
+    
 
-    # logger.debug("Used for debugging your code.")
-    # logger.info("Informative messages from your code.")
-    # logger.warning("Everything works but there is something to be aware of.")
-    # logger.error("There's been a mistake with the process.")
-    # logger.critical("There is something terribly wrong and process may terminate.")
+if __name__ == "__main__":
+
+    main()
