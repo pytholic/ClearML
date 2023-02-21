@@ -1,6 +1,7 @@
 /data
 /pytorch_lightning/lightning_logs/
 /pytorch_lightning/tb_logs/
+/logging/logs
 *.jpeg
 *.jpg
 *.png

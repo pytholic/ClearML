@@ -4,17 +4,16 @@ from datetime import datetime
 
 import torch
 import torchmetrics
-from clearml import Logger, Task
-from torch import nn
-from torch.nn import functional as F
+from clearml import Task
 from torch.utils.data import DataLoader, random_split
-from torchvision import datasets, transforms
+from torchvision import transforms
 from torchvision.datasets import CIFAR10
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 
+# Model class
 class LightningCIFAR10Classifier(pl.LightningModule):
     def __init__(self):
         super().__init__()
@@ -77,6 +76,7 @@ class LightningCIFAR10Classifier(pl.LightningModule):
         return optimizer
 
 
+# Data class
 class CIFAR10DataModule(pl.LightningDataModule):
     def setup(self, stage):
         # transforms for images
@@ -117,18 +117,18 @@ if __name__ == "__main__":
     parser.set_defaults(max_epochs=20)
     args = parser.parse_args()
 
-    # saves top-K checkpoints based on "val_loss" metric
+    # Saves top-K checkpoints based on "val_loss" metric
     checkpoint_callback = ModelCheckpoint(
         save_top_k=1,
         monitor="val_loss",
         mode="min",
-        filename="cifar10-{epoch:02d}-{val_loss:.2f}",
+        filename="logging-example-{epoch:02d}-{val_loss:.2f}",
     )
 
-    # data
+    # Data
     data_module = CIFAR10DataModule()
 
-    # train
+    # Train
     model = LightningCIFAR10Classifier()
     trainer = pl.Trainer.from_argparse_args(args, callbacks=[checkpoint_callback])
     trainer.fit(model, data_module)
