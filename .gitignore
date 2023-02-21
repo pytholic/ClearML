@@ -1,4 +1,6 @@
-/experimentation/data
+/data
+/pytorch_lightning/lightning_logs/
+/pytorch_lightning/tb_logs/
 *.jpeg
 *.jpg
 *.png
