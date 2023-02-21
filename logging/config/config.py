@@ -54,5 +54,5 @@ logging_config = {
 }
 
 logging.config.dictConfig(logging_config)
-console_logger = logging.getLogger()
-console_logger.handlers[0] = RichHandler(markup=True)  # pretty formatting
+logger = logging.getLogger()
+logger.handlers[0] = RichHandler(markup=True)  # pretty formatting

@@ -7,7 +7,7 @@ import torchmetrics
 import utils
 from clearml import Task
 from config import config
-from config.config import console_logger
+from config.config import logger
 from model import *
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
@@ -79,13 +79,13 @@ class CIFAR10DataModule(pl.LightningDataModule):
 if __name__ == "__main__":
 
     # Read args
-    console_logger.info("Reading arguments...")
+    logger.info("Reading arguments...")
     args_path = config.CONFIG_DIR / "args.json"
     args = Namespace(**utils.load_dict(filepath=args_path))
 
     # Connecting ClearML with the current process,
     # from here on everything is logged automatically
-    console_logger.info("Initilizaing clearML task...")
+    logger.info("Initilizaing clearML task...")
     task = Task.init(
         project_name="experimentation/logging",
         task_name=f"logging-example-{datetime.now()}",
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         args, callbacks=[checkpoint_callback], default_root_dir=config.LOGS_DIR
     )
 
-    console_logger.info("Starting training...")
+    logger.info("Starting training...")
     trainer.fit(classifier, data_module)
 
     # logger.debug("Used for debugging your code.")
