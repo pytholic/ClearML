@@ -6,12 +6,13 @@ CONFIG_DIR = Path(BASE_DIR, "config")
 DATA_DIR = Path((BASE_DIR).parent.absolute(), "data")
 LOGS_DIR = Path(BASE_DIR, "logs")
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
-# Loggign configuration
+
 import logging
 import sys
 
 from rich.logging import RichHandler
 
+# Logging configuration
 logging_config = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -53,5 +54,5 @@ logging_config = {
 }
 
 logging.config.dictConfig(logging_config)
-logger = logging.getLogger()
-logger.handlers[0] = RichHandler(markup=True)  # pretty formatting
+console_logger = logging.getLogger()
+console_logger.handlers[0] = RichHandler(markup=True)  # pretty formatting
