@@ -193,6 +193,11 @@ if __name__ == "__main__":
     # train
     model = LightningCIFAR10Classifier()
     trainer = pl.Trainer.from_argparse_args(
-        args, logger=logger, callbacks=[checkpoint_callback]
+        args,
+        logger=logger,
+        callbacks=[checkpoint_callback],
+        accelerator="gpu",
+        devices=1,
     )
+
     trainer.fit(model, data_module)

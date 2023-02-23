@@ -1,10 +1,13 @@
 from argparse import Namespace
 
 import torch
+import torchmetrics
 import utils
 from config import config
 from torch import nn
 from torch.nn import functional as F
+
+import pytorch_lightning as pl
 
 args_path = config.CONFIG_DIR / "args.json"
 args = Namespace(**utils.load_dict(filepath=args_path))
@@ -42,3 +45,37 @@ class cifar10Classifier(nn.Module):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return F.log_softmax(x, dim=1)
+
+
+class LightningCIFAR10Classifier(pl.LightningModule):
+    def __init__(self):
+        super().__init__()
+
+        self.model = cifar10Classifier()
+        self.accuracy = torchmetrics.Accuracy(
+            task="multiclass", num_classes=args.num_classes
+        )
+
+    def cross_entropy_loss(self, logits, labels):
+        return F.nll_loss(logits, labels)
+
+    def training_step(self, train_batch, batch_idx):
+        x, y = train_batch
+        logits = self.model(x)
+        loss = self.cross_entropy_loss(logits, y)
+        acc = self.accuracy(logits, y)
+        self.log("accuracy/train_accuracy", acc)
+        self.log("loss/train_loss", loss)
+        return loss
+
+    def validation_step(self, val_batch, batch_idx):
+        x, y = val_batch
+        logits = self.model(x)
+        loss = self.cross_entropy_loss(logits, y)
+        acc = self.accuracy(logits, y)
+        self.log("accuracy/val_accuracy", acc)
+        self.log("loss/val_loss", loss)
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=args.learning_rate)
+        return optimizer
