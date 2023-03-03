@@ -34,10 +34,10 @@ def create_dataloaders(args, train_subset, valid_subset):
     from torch.utils.data import DataLoader
 
     train_dataloader = DataLoader(
-        train_subset, batch_size=args.batch_size, num_workers=24
+        train_subset, batch_size=args.batch_size, num_workers=24, shuffle=True
     )
     valid_dataloader = DataLoader(
-        valid_subset, batch_size=args.batch_size, num_workers=24
+        valid_subset, batch_size=args.batch_size, num_workers=24, shuffle=False
     )
     return train_dataloader, valid_dataloader
 

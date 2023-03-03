@@ -153,10 +153,10 @@ class CIFAR10DataModule(pl.LightningDataModule):
         )
 
     def train_dataloader(self):
-        return DataLoader(self.cifar10_train, batch_size=args.batch_size)
+        return DataLoader(self.cifar10_train, batch_size=args.batch_size, shuffle=True)
 
     def val_dataloader(self):
-        return DataLoader(self.cifar10_test, batch_size=args.batch_size)
+        return DataLoader(self.cifar10_test, batch_size=args.batch_size, shuffle=False)
 
 
 if __name__ == "__main__":
